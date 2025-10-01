@@ -65,17 +65,19 @@
     border-radius:8px;
     box-shadow:0 10px 30px rgba(0,0,0,0.6);
   }
+
+  /* ✅ Correction ici */
   .explosion {
-    position:absolute;
-    inset:0;
     display:flex;
     align-items:center;
     justify-content:center;
     pointer-events:none;
     opacity:0;
     transition:opacity .6s ease;
+    margin-top:40px; /* pour espacer sous le texte */
   }
   .explosion.show{ opacity:1; }
+
   .final-images{
     display:flex;
     gap:30px;
@@ -225,7 +227,6 @@
         });
         if (Date.now() < end) requestAnimationFrame(frame);
       })();
-      // Son final après confettis
       setTimeout(()=> playSound(SOUND_FINAL_BONUS), duration + 700);
     }catch(e){}
   }
