@@ -27,6 +27,7 @@
     max-width:1100px;
     width:100%;
     padding:40px;
+    position:relative; /* needed for positioning children */
   }
   .line{
     font-size: clamp(20px, 4.2vw, 48px);
@@ -47,8 +48,8 @@
   /* image container */
   .img-wrap{
     position:relative;
-    margin: 10px auto;
-    max-width:500px;
+    margin: 10px auto 6px auto;
+    max-width:420px;
     width:100%;
     height:auto;
     display:none;
@@ -58,6 +59,7 @@
     height:auto;
     border-radius:8px;
     box-shadow:0 10px 40px rgba(0,0,0,0.6);
+    display:block;
   }
 
   /* final reveal */
@@ -69,18 +71,19 @@
     transition:opacity .6s ease;
   }
   .explosion {
-    position:relative;
-    margin-top:20px;
+    position:absolute;
+    inset:0;
     display:none;
     align-items:center;
     justify-content:center;
+    pointer-events:none;
     opacity:0;
     transition:opacity .6s ease;
   }
   .explosion.show{ display:flex; opacity:1; }
   .final-images{
     display:flex;
-    gap:30px;
+    gap:20px;
     align-items:center;
     justify-content:center;
     transform:translateY(0);
@@ -127,6 +130,9 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
   <script>
+  /*************************************************************
+   * Texte et timing
+   *************************************************************/
   const lines = [
     { text: "BON ANNIVERSAIRE MAMAN", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:false },
     { text: "Déjà un demi siècle que tu illumines cette Terre par ta présence !!", sound: "https://www.soundjay.com/misc/sparkle-02.mp3", showJesus:true, final:false },
@@ -138,6 +144,7 @@
     { text: "UNE SORTIE ESCAPE GAME AVEC TOUTE LA FAMILLE 🥳🥳🥳", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:true }
   ];
 
+  // create DOM lines
   const wrapper = document.getElementById('linesWrapper');
   lines.forEach((l, idx) => {
     const div = document.createElement('div');
@@ -147,93 +154,171 @@
     wrapper.appendChild(div);
   });
 
+  // element refs
   const jesusWrap = document.getElementById('jesusWrap');
   const explosion = document.getElementById('explosion');
   const overlay = document.getElementById('overlay');
 
+  /*************************************************************
+   * Sounds (public, integrated)
+   *************************************************************/
   function playSound(url){
     if(!url) return;
     try{
       const a = new Audio(url);
       a.volume = 0.9;
-      a.play().catch(e => console.warn('Sound play blocked', e));
+      a.play().catch(e => {
+        // autoplay may be blocked — non fatal
+        console.warn('Sound play blocked or failed', e);
+      });
     }catch(e){ console.warn(e); }
   }
 
+  /*************************************************************
+   * Speech synthesis with a fallback timer (if blocked by browser)
+   *************************************************************/
   function speak(text, onend){
+    if(typeof onend !== 'function') onend = function(){};
     const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const frVoices = voices.filter(v => /fr|french|fr-FR/i.test(v.lang + ' ' + v.name));
-    if(frVoices.length) { u.voice = frVoices[0]; } else if(voices.length) { u.voice = voices[0]; }
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    const frVoices = voices.filter(v => /fr|french|fr-FR/i.test((v.lang || '') + ' ' + (v.name || '')));
+    if(frVoices.length) u.voice = frVoices[0];
     u.rate = 0.95; u.pitch = 1.05; u.volume = 1.0;
-    u.onend = onend;
-    try {
+
+    let ended = false;
+    // fallback: if speech doesn't end within reasonable time, call onend so sequence continues
+    const fallbackDelay = Math.max(1400, text.length * 60); // ms
+    const fallback = setTimeout(() => {
+      if(!ended){ ended = true; try{ window.speechSynthesis.cancel(); }catch(e){}; onend(); }
+    }, fallbackDelay + 800);
+
+    u.onend = () => {
+      if(!ended){ ended = true; clearTimeout(fallback); onend(); }
+    };
+
+    try{
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
-    } catch(e){ if(onend) setTimeout(onend, 1200 + text.length*12); }
+    }catch(e){
+      clearTimeout(fallback);
+      console.warn('Speech synth failed', e);
+      setTimeout(onend, 600);
+    }
   }
 
+  /*************************************************************
+   * Main sequence (synchronised)
+   *************************************************************/
   let idx = 0;
   function showLine(i){
+    idx = i; // keep index in sync
     const line = document.getElementById('line-'+i);
+    // hide all lines first
     document.querySelectorAll('.line').forEach(el => el.classList.remove('show'));
+    // display this
     line.classList.add('show');
 
+    // handle jesus image visibility and ensure it's visible on screen
     if(lines[i].showJesus){
       jesusWrap.style.display = 'block';
+      jesusWrap.setAttribute('aria-hidden','false');
+      // scroll the image (and text) into view so user doesn't have to
+      try{ jesusWrap.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
     } else {
       jesusWrap.style.display = 'none';
+      jesusWrap.setAttribute('aria-hidden','true');
     }
 
+    // If this is the FINAL line, reveal images/confetti immediately (in sync with the voice)
+    if(lines[i].final){
+      revealFinale();
+    }
+
+    // play sound effect for this line
     if(lines[i].sound) playSound(lines[i].sound);
 
+    // speak and then move to next when finished (unless final)
     speak(lines[i].text, () => {
-      setTimeout(() => {
-        if(lines[i].final){
-          revealFinale();
-        } else {
+      if(!lines[i].final){
+        // small pause after speech for theatrical effect
+        setTimeout(() => {
           idx++;
           if(idx < lines.length) showLine(idx);
-        }
-      }, 650);
+        }, 650);
+      } else {
+        // final line ended — we keep the final state visible
+      }
     });
   }
 
+  /*************************************************************
+   * Finale: explosion of colors, confetti, final sounds, show images
+   * (This runs *when the final line is shown*, so it's in sync with the voice)
+   *************************************************************/
   function revealFinale(){
+    // show overlay tint
     overlay.style.transition = 'background .6s ease, opacity .6s ease';
     overlay.style.background = 'radial-gradient(circle at center, rgba(255,255,255,0.12) 0%, rgba(245,194,70,0.07) 20%, rgba(0,0,0,0.6) 70%)';
-    overlay.style.opacity = '0.2';
+    overlay.style.opacity = '0.22';
 
+    // show final images container
     explosion.classList.add('show');
-    explosion.style.pointerEvents = 'none';
+    explosion.setAttribute('aria-hidden','false');
 
-    // confetti immediately
+    // play celebratory layered sounds immediately
+    try{
+      playSound("https://www.soundjay.com/human/applause-8.mp3");
+      setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-1.mp3"), 300);
+      setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-2.mp3"), 600);
+    }catch(e){ console.warn('play celebratory sounds failed', e); }
+
+    // confetti bursts
     try{
       const duration = 3000;
       const end = Date.now() + duration;
       (function frame(){
-        confetti({ particleCount: 20, spread: 60, origin: { x: Math.random(), y: Math.random() * 0.6 } });
-        if (Date.now() < end) { requestAnimationFrame(frame); }
+        confetti({ particleCount: 20, spread: 70, origin: { x: Math.random(), y: Math.random() * 0.6 } });
+        if (Date.now() < end) requestAnimationFrame(frame);
       })();
     }catch(e){ console.warn('confetti failed', e); }
-
-    document.querySelectorAll('.line').forEach(el => el.classList.remove('show'));
-    document.getElementById('line-'+(lines.length-1)).classList.add('show');
   }
 
+  /*************************************************************
+   * Auto-start sequence with fallback to a user-gesture button
+   *************************************************************/
   function tryStart(){
-    if (typeof speechSynthesis !== 'undefined') { speechSynthesis.onvoiceschanged = function(){}; }
+    // refresh voices list
+    if (typeof speechSynthesis !== 'undefined') {
+      speechSynthesis.onvoiceschanged = function(){};
+    }
     showLine(0);
   }
 
   window.addEventListener('load', () => {
     setTimeout(() => {
-      try { tryStart(); } catch(e) { showStartOverlay(); }
+      try{
+        tryStart();
+        // if speech didn't start (blocked), show a big "Tap to start" button
+        setTimeout(() => {
+          if (!window.speechSynthesis || window.speechSynthesis.speaking === false) {
+            showStartOverlay();
+          }
+        }, 700);
+      }catch(e){
+        showStartOverlay();
+      }
     }, 300);
   });
 
+  /*************************************************************
+   * Fallback start button for browsers that block autoplay
+   *************************************************************/
   function showStartOverlay(){
+    // avoid creating multiple buttons
+    if(document.getElementById('startSurpriseBtn')) return;
+
     const btn = document.createElement('button');
+    btn.id = 'startSurpriseBtn';
     btn.textContent = 'Lancer la surprise 🎉';
     btn.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--accent),#ffdd6b);font-size:18px;font-weight:700;cursor:pointer;z-index:9999';
     document.body.appendChild(btn);
@@ -243,6 +328,9 @@
     });
   }
 
+  /*************************************************************
+   * Accessibility: allow keyboard Enter to start if needed
+   *************************************************************/
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Enter' && (window.speechSynthesis && !window.speechSynthesis.speaking)){
       tryStart();
