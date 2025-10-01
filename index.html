@@ -145,6 +145,11 @@
     { text: "UNE SORTIE ESCAPE GAME AVEC TOUTE LA FAMILLE 🥳🥳🥳", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:true }
   ];
 
+  // === Ajout des 3 sons ===
+  const SOUND_ANIME_FIRST = "mp3/wow.mp3";
+  const SOUND_ANGEL_JESUS = "mp3/angel-choir.mp3";
+  const SOUND_FINAL_BONUS = "mp3/heheheha.mp3";
+
   const wrapper = document.getElementById('linesWrapper');
   lines.forEach((l, idx) => {
     const div = document.createElement('div');
@@ -205,6 +210,16 @@
       playSound("https://bigsoundbank.com/UPLOAD/mp3/2406.mp3");
     }
 
+    // 🔊 Son anime-wow sur la première phrase
+    if(i === 0) {
+      playSound(SOUND_ANIME_FIRST);
+    }
+
+    // 🔊 Son angel-choir quand Jésus apparaît
+    if(lines[i].showJesus) {
+      playSound(SOUND_ANGEL_JESUS);
+    }
+
     speak(lines[i].text, () => {
       setTimeout(() => {
         if(!lines[i].final){
@@ -214,7 +229,7 @@
       }, 650);
     });
 
-    if (lines[i].final) {
+    if(lines[i].final) {
       revealFinale();
     }
   }
@@ -223,67 +238,8 @@
     explosion.classList.add('show');
     document.body.classList.add('strobe');
 
-    // 🔊 Son spécial Ta Da
+    // 🔊 Son Ta Da
     playSound("https://soundbible.com/mp3/Ta%20Da-SoundBible.com-1884170640.mp3");
 
     playSound("https://www.soundjay.com/human/applause-8.mp3");
-    setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-1.mp3"), 300);
-    setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-2.mp3"), 600);
-
-    try{
-      const duration = 5000;
-      const end = Date.now() + duration;
-      (function frame(){
-        confetti({
-          particleCount: 20,
-          spread: 60,
-          origin: { x: Math.random(), y: Math.random() * 0.6 }
-        });
-        if (Date.now() < end) requestAnimationFrame(frame);
-      })();
-    }catch(e){}
-  }
-
-  function tryStart(){ 
-    if (typeof speechSynthesis !== 'undefined') {
-      speechSynthesis.onvoiceschanged = function(){};
-    }
-    showLine(0); 
-  }
-
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      try {
-        tryStart();
-        setTimeout(() => {
-          if (!window.speechSynthesis || window.speechSynthesis.speaking === false) {
-            showStartOverlay();
-          }
-        }, 600);
-      } catch(e) {
-        showStartOverlay();
-      }
-    }, 300);
-  });
-
-  function showStartOverlay(){
-    const btn = document.createElement('button');
-    btn.textContent = 'Lancer la surprise 🎉';
-    btn.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--accent),#ffdd6b);font-size:18px;font-weight:700;cursor:pointer;z-index:9999';
-    document.body.appendChild(btn);
-    btn.addEventListener('click', ()=>{
-      btn.disabled = true;
-      btn.style.opacity = '0.6';
-      tryStart();
-      setTimeout(()=>btn.remove(), 700);
-    });
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if(e.key === 'Enter' && (window.speechSynthesis && !window.speechSynthesis.speaking)){
-      tryStart();
-    }
-  });
-  </script>
-</body>
-</html>
+    setTimeout(()=> playSound("https://www.sound
