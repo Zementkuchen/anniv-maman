@@ -92,6 +92,19 @@
     .final-images img{ width:42vw; max-width:220px; }
     .line{ margin:18px 0; }
   }
+
+  /* Animation stroboscopique */
+  @keyframes strobe {
+    0%   { background: #ff0000; }
+    20%  { background: #00ff00; }
+    40%  { background: #0000ff; }
+    60%  { background: #ffff00; }
+    80%  { background: #ff00ff; }
+    100% { background: #00ffff; }
+  }
+  .strobe {
+    animation: strobe 0.2s infinite;
+  }
 </style>
 </head>
 <body>
@@ -182,23 +195,29 @@
 
     speak(lines[i].text, () => {
       setTimeout(() => {
-        if(lines[i].final){
-          revealFinale();
-        } else {
+        if(!lines[i].final){
           idx++;
           if(idx < lines.length) showLine(idx);
         }
       }, 650);
     });
+
+    // Déclenche la finale dès que la dernière phrase commence
+    if (lines[i].final) {
+      revealFinale();
+    }
   }
 
   function revealFinale(){
     explosion.classList.add('show');
+    document.body.classList.add('strobe'); // active stroboscope
+
     playSound("https://www.soundjay.com/human/applause-8.mp3");
     setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-1.mp3"), 300);
     setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-2.mp3"), 600);
+
     try{
-      const duration = 3000;
+      const duration = 5000;
       const end = Date.now() + duration;
       (function frame(){
         confetti({
