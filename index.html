@@ -47,8 +47,8 @@
   /* image container */
   .img-wrap{
     position:relative;
-    margin: 20px auto;
-    max-width:700px;
+    margin: 10px auto;
+    max-width:500px;
     width:100%;
     height:auto;
     display:none;
@@ -69,16 +69,15 @@
     transition:opacity .6s ease;
   }
   .explosion {
-    position:absolute;
-    inset:0;
-    display:flex;
+    position:relative;
+    margin-top:20px;
+    display:none;
     align-items:center;
     justify-content:center;
-    pointer-events:none;
     opacity:0;
     transition:opacity .6s ease;
   }
-  .explosion.show{ opacity:1; }
+  .explosion.show{ display:flex; opacity:1; }
   .final-images{
     display:flex;
     gap:30px;
@@ -86,14 +85,14 @@
     justify-content:center;
     transform:translateY(0);
   }
-  .final-images img{ max-width:40vw; width:360px; border-radius:8px; box-shadow:0 14px 40px rgba(0,0,0,0.6); }
+  .final-images img{ max-width:40vw; width:260px; border-radius:8px; box-shadow:0 14px 40px rgba(0,0,0,0.6); }
 
   /* small note */
   .note{ position:absolute; left:12px; bottom:10px; font-size:12px; color:rgba(255,255,255,0.25); }
 
   /* responsive */
   @media (max-width:720px){
-    .final-images img{ width:42vw; max-width:220px; }
+    .final-images img{ width:42vw; max-width:180px; }
     .line{ margin:18px 0; }
   }
 </style>
@@ -128,9 +127,6 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 
   <script>
-  /*************************************************************
-   * Texte et timing
-   *************************************************************/
   const lines = [
     { text: "BON ANNIVERSAIRE MAMAN", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:false },
     { text: "Déjà un demi siècle que tu illumines cette Terre par ta présence !!", sound: "https://www.soundjay.com/misc/sparkle-02.mp3", showJesus:true, final:false },
@@ -142,7 +138,6 @@
     { text: "UNE SORTIE ESCAPE GAME AVEC TOUTE LA FAMILLE 🥳🥳🥳", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:true }
   ];
 
-  // create DOM lines
   const wrapper = document.getElementById('linesWrapper');
   lines.forEach((l, idx) => {
     const div = document.createElement('div');
@@ -152,85 +147,48 @@
     wrapper.appendChild(div);
   });
 
-  // element refs
   const jesusWrap = document.getElementById('jesusWrap');
-  const jesusImg = document.getElementById('jesusImg');
   const explosion = document.getElementById('explosion');
   const overlay = document.getElementById('overlay');
 
-  /*************************************************************
-   * Sounds (public, integrated)
-   * If any link breaks, you can replace it with another direct URL.
-   *************************************************************/
   function playSound(url){
     if(!url) return;
     try{
       const a = new Audio(url);
       a.volume = 0.9;
-      a.play().catch(e => {
-        // autoplay may be blocked on mobile; it's non-fatal
-        console.warn('Sound play blocked or failed', e);
-      });
+      a.play().catch(e => console.warn('Sound play blocked', e));
     }catch(e){ console.warn(e); }
   }
 
-  /*************************************************************
-   * Speech synthesis (présentateur télé français style)
-   *************************************************************/
   function speak(text, onend){
-    // create utterance
     const u = new SpeechSynthesisUtterance(text);
-    // prefer a french voice; fallback to default
     const voices = window.speechSynthesis.getVoices();
     const frVoices = voices.filter(v => /fr|french|fr-FR/i.test(v.lang + ' ' + v.name));
-    if(frVoices.length) {
-      u.voice = frVoices[0];
-    } else if(voices.length) {
-      u.voice = voices[0];
-    }
-    // vocal style tweaks for "présentateur"
-    u.rate = 0.95;    // slightly slow for ceremony
-    u.pitch = 1.05;   // slightly higher for clarity
-    u.volume = 1.0;
+    if(frVoices.length) { u.voice = frVoices[0]; } else if(voices.length) { u.voice = voices[0]; }
+    u.rate = 0.95; u.pitch = 1.05; u.volume = 1.0;
     u.onend = onend;
-    // speak (may require user interaction on some mobile browsers)
     try {
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
-    } catch(e){
-      console.warn('Speech failed', e);
-      if(onend) setTimeout(onend, 1200 + text.length*12);
-    }
+    } catch(e){ if(onend) setTimeout(onend, 1200 + text.length*12); }
   }
 
-  /*************************************************************
-   * Main sequence (synchronised)
-   *************************************************************/
   let idx = 0;
   function showLine(i){
     const line = document.getElementById('line-'+i);
-    // hide all lines first (we show each alone)
     document.querySelectorAll('.line').forEach(el => el.classList.remove('show'));
-    // display this
     line.classList.add('show');
 
-    // handle jesus image visibility
     if(lines[i].showJesus){
       jesusWrap.style.display = 'block';
-      jesusWrap.setAttribute('aria-hidden','false');
     } else {
       jesusWrap.style.display = 'none';
-      jesusWrap.setAttribute('aria-hidden','true');
     }
 
-    // play sound effect for this line
     if(lines[i].sound) playSound(lines[i].sound);
 
-    // speak and then move to next when finished
     speak(lines[i].text, () => {
-      // small pause after speech for theatrical effect
       setTimeout(() => {
-        // if final line -> reveal explosion animations
         if(lines[i].final){
           revealFinale();
         } else {
@@ -241,98 +199,50 @@
     });
   }
 
-  /*************************************************************
-   * Finale: explosion of colors, confetti, final sounds, show images
-   *************************************************************/
   function revealFinale(){
-    // fade overlay to colored explosion
     overlay.style.transition = 'background .6s ease, opacity .6s ease';
     overlay.style.background = 'radial-gradient(circle at center, rgba(255,255,255,0.12) 0%, rgba(245,194,70,0.07) 20%, rgba(0,0,0,0.6) 70%)';
     overlay.style.opacity = '0.2';
 
-    // show explosion panel
     explosion.classList.add('show');
     explosion.style.pointerEvents = 'none';
 
-    // play celebratory layered sounds:
-    playSound("https://www.soundjay.com/human/applause-8.mp3");
-    setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-1.mp3"), 300);
-    setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-2.mp3"), 600);
-
-    // confetti burst using canvas-confetti library
+    // confetti immediately
     try{
       const duration = 3000;
       const end = Date.now() + duration;
-
       (function frame(){
-        // launch several small bursts
-        confetti({
-          particleCount: 20,
-          spread: 60,
-          origin: { x: Math.random(), y: Math.random() * 0.6 }
-        });
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
+        confetti({ particleCount: 20, spread: 60, origin: { x: Math.random(), y: Math.random() * 0.6 } });
+        if (Date.now() < end) { requestAnimationFrame(frame); }
       })();
     }catch(e){ console.warn('confetti failed', e); }
 
-    // keep final images visible; after a bit, ensure the last line stays visible
     document.querySelectorAll('.line').forEach(el => el.classList.remove('show'));
     document.getElementById('line-'+(lines.length-1)).classList.add('show');
   }
 
-  /*************************************************************
-   * Auto-start sequence:
-   * Some browsers require a user gesture to play audio / speech.
-   * We'll try to auto-start; if blocked, show a big "Tap to start" overlay.
-   *************************************************************/
   function tryStart(){
-    // start the sequence
-    // refresh voices (voices may load asynchronously)
-    if (typeof speechSynthesis !== 'undefined') {
-      speechSynthesis.onvoiceschanged = function(){ /* no-op, ensures voices list populates */ };
-    }
+    if (typeof speechSynthesis !== 'undefined') { speechSynthesis.onvoiceschanged = function(){}; }
     showLine(0);
   }
 
-  // attempt auto-start; if blocked show a tap button
   window.addEventListener('load', () => {
     setTimeout(() => {
-      try {
-        tryStart();
-        // if speechSynthesis is speaking soon, okay
-        setTimeout(() => {
-          if (!window.speechSynthesis || window.speechSynthesis.speaking === false) {
-            // might be blocked — show gesture
-            showStartOverlay();
-          }
-        }, 600);
-      } catch(e) {
-        showStartOverlay();
-      }
+      try { tryStart(); } catch(e) { showStartOverlay(); }
     }, 300);
   });
 
-  /*************************************************************
-   * Fallback start button for browsers that block autoplay
-   *************************************************************/
   function showStartOverlay(){
     const btn = document.createElement('button');
     btn.textContent = 'Lancer la surprise 🎉';
     btn.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--accent),#ffdd6b);font-size:18px;font-weight:700;cursor:pointer;z-index:9999';
     document.body.appendChild(btn);
     btn.addEventListener('click', ()=>{
-      btn.disabled = true;
-      btn.style.opacity = '0.6';
-      tryStart();
-      setTimeout(()=>btn.remove(), 700);
+      btn.disabled = true; btn.style.opacity = '0.6';
+      tryStart(); setTimeout(()=>btn.remove(), 700);
     });
   }
 
-  /*************************************************************
-   * Accessibility: allow keyboard Enter to start if needed
-   *************************************************************/
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Enter' && (window.speechSynthesis && !window.speechSynthesis.speaking)){
       tryStart();
