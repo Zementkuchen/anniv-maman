@@ -255,6 +255,11 @@
     setTimeout(() => {
       try {
         tryStart();
+        setTimeout(() => {
+          if (!window.speechSynthesis || window.speechSynthesis.speaking === false) {
+            showStartOverlay();
+          }
+        }, 600);
       } catch(e) {
         showStartOverlay();
       }
@@ -273,6 +278,12 @@
       setTimeout(()=>btn.remove(), 700);
     });
   }
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (window.speechSynthesis && !window.speechSynthesis.speaking)){
+      tryStart();
+    }
+  });
   </script>
 </body>
 </html>
