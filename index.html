@@ -34,8 +34,6 @@
     width:100%;
     padding:40px;
   }
-
-  /* Texte toujours au centre */
   .lines-wrapper {
     position: relative;
     min-height: 60vh;
@@ -67,7 +65,6 @@
     border-radius:8px;
     box-shadow:0 10px 30px rgba(0,0,0,0.6);
   }
-
   .explosion {
     position:absolute;
     inset:0;
@@ -98,8 +95,6 @@
     font-size:12px; 
     color:rgba(255,255,255,0.25); 
   }
-
-  /* Stroboscope */
   @keyframes strobe {
     0%   { background: #ff0000; }
     20%  { background: #00ff00; }
@@ -117,22 +112,16 @@
   <div class="stage" id="stage">
     <div class="panel" role="main" aria-live="polite">
       <div id="linesWrapper" class="lines-wrapper"></div>
-
-      <!-- final explosion area -->
       <div class="explosion" id="explosion" aria-hidden="true">
         <div class="final-images" id="finalImages">
           <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT7UHe4EmUI1M73baN2mDOx-grtG4ORUvZqmA&s" alt="Image 1" />
           <img src="https://crack-the-egg.com/wp-content/uploads/oeuf_noir_600x600.jpg" alt="Image 2" />
         </div>
       </div>
-
       <div class="note">Scannez, regardez et profitez 🎉</div>
     </div>
   </div>
-
-  <!-- confetti lib -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-
   <script>
   const lines = [
     { text: "BON ANNIVERSAIRE MAMAN", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:false },
@@ -145,7 +134,6 @@
     { text: "UNE SORTIE ESCAPE GAME AVEC TOUTE LA FAMILLE 🥳🥳🥳", sound: "https://www.soundjay.com/human/applause-8.mp3", showJesus:false, final:true }
   ];
 
-  // === Ajout des 3 sons ===
   const SOUND_ANIME_FIRST = "mp3/wow.mp3";
   const SOUND_ANGEL_JESUS = "mp3/angel-choir.mp3";
   const SOUND_FINAL_BONUS = "mp3/heheheha.mp3";
@@ -156,14 +144,12 @@
     div.className = 'line';
     div.id = 'line-'+idx;
     div.textContent = l.text;
-
     if (l.showJesus) {
       const img = document.createElement('img');
       img.src = "https://cdn-useast1.kapwing.com/static/templates/buddy-christ-meme-template-thumbnail-b83659f8.webp";
       img.alt = "Jésus";
       div.appendChild(img);
     }
-
     wrapper.appendChild(div);
   });
 
@@ -202,23 +188,10 @@
     const line = document.getElementById('line-'+i);
     line.classList.add('show');
 
-    // Son normal
     if(lines[i].sound) playSound(lines[i].sound);
-
-    // 🔊 Son spécial "pour t'offrir"
-    if (lines[i].text.toLowerCase().includes("pour t'offrir")) {
-      playSound("https://bigsoundbank.com/UPLOAD/mp3/2406.mp3");
-    }
-
-    // 🔊 Son anime-wow sur la première phrase
-    if(i === 0) {
-      playSound(SOUND_ANIME_FIRST);
-    }
-
-    // 🔊 Son angel-choir quand Jésus apparaît
-    if(lines[i].showJesus) {
-      playSound(SOUND_ANGEL_JESUS);
-    }
+    if(lines[i].text.toLowerCase().includes("pour t'offrir")) playSound("https://bigsoundbank.com/UPLOAD/mp3/2406.mp3");
+    if(i===0) playSound(SOUND_ANIME_FIRST);
+    if(lines[i].showJesus) playSound(SOUND_ANGEL_JESUS);
 
     speak(lines[i].text, () => {
       setTimeout(() => {
@@ -229,17 +202,74 @@
       }, 650);
     });
 
-    if(lines[i].final) {
-      revealFinale();
-    }
+    if(lines[i].final) revealFinale();
   }
 
   function revealFinale(){
     explosion.classList.add('show');
     document.body.classList.add('strobe');
 
-    // 🔊 Son Ta Da
     playSound("https://soundbible.com/mp3/Ta%20Da-SoundBible.com-1884170640.mp3");
-
     playSound("https://www.soundjay.com/human/applause-8.mp3");
-    setTimeout(()=> playSound("https://www.sound
+    setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-1.mp3"), 300);
+    setTimeout(()=> playSound("https://www.soundjay.com/human/cheer-2.mp3"), 600);
+
+    try{
+      const duration = 5000;
+      const end = Date.now() + duration;
+      (function frame(){
+        confetti({
+          particleCount: 20,
+          spread: 60,
+          origin: { x: Math.random(), y: Math.random() * 0.6 }
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+      // Son final après confettis
+      setTimeout(()=> playSound(SOUND_FINAL_BONUS), duration + 700);
+    }catch(e){}
+  }
+
+  function tryStart(){ 
+    if (typeof speechSynthesis !== 'undefined') {
+      speechSynthesis.onvoiceschanged = function(){};
+    }
+    showLine(0); 
+  }
+
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      try {
+        tryStart();
+        setTimeout(() => {
+          if (!window.speechSynthesis || window.speechSynthesis.speaking === false) {
+            showStartOverlay();
+          }
+        }, 600);
+      } catch(e) {
+        showStartOverlay();
+      }
+    }, 300);
+  });
+
+  function showStartOverlay(){
+    const btn = document.createElement('button');
+    btn.textContent = 'Lancer la surprise 🎉';
+    btn.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:18px 28px;border-radius:12px;border:none;background:linear-gradient(90deg,var(--accent),#ffdd6b);font-size:18px;font-weight:700;cursor:pointer;z-index:9999';
+    document.body.appendChild(btn);
+    btn.addEventListener('click', ()=>{
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      tryStart();
+      setTimeout(()=>btn.remove(), 700);
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && (window.speechSynthesis && !window.speechSynthesis.speaking)){
+      tryStart();
+    }
+  });
+  </script>
+</body>
+</html>
